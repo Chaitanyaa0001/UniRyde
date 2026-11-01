@@ -1,0 +1,35 @@
+services:
+  api:
+    build: ./backend
+    command: pnpm run dev
+    ports:
+      - "5050:5050"
+    env_file: ./backend/.env
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/uniryde
+      REDIS_URL: redis://redis:6379
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    depends_on:
+      - postgres
+      - redis
+
+  postgres:
+    image: postgres:18-alpine
+    ports:
+      - "5433:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: uniryde
+    volumes:
+      - pgdata:/var/lib/postgresql
+
+  redis:
+    image: redis:8.2-alpine
+    ports:
+      - "6379:6379"
+
+volumes:
+  pgdata:

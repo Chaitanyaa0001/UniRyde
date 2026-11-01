@@ -1,0 +1,133 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum CarpoolRequestStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+}
+
+enum CarpoolStatus {
+  ACTIVE
+  EXPIRED
+  CANCELLED
+}
+
+model User {
+  id              String               @id @default(uuid())
+  username        String               @unique
+  email           String               @unique
+  password        String
+  profilePhotoUrl String?
+  profilePhotoId  String?
+  carpools        Carpool[]
+  carpoolRequests CarpoolRequest[]
+  carpoolMembers  CarpoolMember[]
+  messages        Message[]
+  conversations   ConversationMember[]
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+
+  @@map("users")
+}
+
+model Carpool {
+  id               String           @id @default(uuid())
+  userId           String
+  pickupPoint      String
+  destinationPoint String
+  departureTime    DateTime
+  requiredPeople   Int
+  status           CarpoolStatus    @default(ACTIVE)
+  user             User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  requests         CarpoolRequest[]
+  members          CarpoolMember[]
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  @@index([userId])
+  @@index([departureTime])
+  @@index([createdAt])
+  @@map("carpools")
+}
+
+model CarpoolRequest {
+  id        String               @id @default(uuid())
+  carpoolId String
+  userId    String
+  status    CarpoolRequestStatus @default(PENDING)
+  carpool   Carpool              @relation(fields: [carpoolId], references: [id], onDelete: Cascade)
+  user      User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime             @default(now())
+  updatedAt DateTime             @updatedAt
+
+  @@unique([carpoolId, userId])
+  @@index([carpoolId, status])
+  @@index([userId])
+  @@map("carpool_requests")
+}
+
+model CarpoolMember {
+  id        String   @id @default(uuid())
+  carpoolId String
+  userId    String
+  carpool   Carpool  @relation(fields: [carpoolId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  joinedAt  DateTime @default(now())
+
+  @@unique([carpoolId, userId])
+  @@index([userId])
+  @@map("carpool_members")
+}
+
+model Conversation {
+  id        String               @id @default(uuid())
+  key       String               @unique
+  members   ConversationMember[]
+  messages  Message[]
+  createdAt DateTime             @default(now())
+  updatedAt DateTime             @updatedAt
+
+  @@map("conversations")
+}
+
+model ConversationMember {
+  id             String       @id @default(uuid())
+  conversationId String
+  userId         String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  joinedAt       DateTime     @default(now())
+
+  @@unique([conversationId, userId])
+  @@index([userId])
+  @@map("conversation_members")
+}
+
+model Message {
+  id             String       @id @default(uuid())
+  conversationId String
+  senderId       String?
+  content        String?
+  imageUrl       String?
+  imageId        String?
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender         User?        @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@index([conversationId, createdAt])
+  @@index([senderId])
+  @@map("messages")
+}
